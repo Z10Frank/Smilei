@@ -241,6 +241,9 @@ void Patch::finalizeMPIenvironment( Params &params )
 
     // add comms for species
     nb_comms += 2*vecSpecies.size();
+    
+    // add comms for the birth records of each species (DiagNewParticles)
+    nb_comms += 2*vecSpecies.size();
 
     // Adaptive vectorization:
     if( params.has_adaptive_vectorization ) {

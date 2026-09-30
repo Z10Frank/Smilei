@@ -2,6 +2,7 @@
 #define BIRTHRECORDS_H
 
 #include <vector>
+#include <mpi.h>
 
 #include "Particles.h"
 #include "Ionization.h"
@@ -31,6 +32,10 @@ struct BirthRecords
     
     std::vector<double> birth_time_;
     Particles p_;
+    
+    //! Buffers kept alive during the non-blocking send of the records with their patch
+    int mpi_count_ = 0;
+    MPI_Datatype mpi_type_ = MPI_DATATYPE_NULL;
 };
 
 #endif
