@@ -819,9 +819,9 @@ void SmileiMPI::isend_species( Patch *patch, int to, int &irequest, int tag, Par
     for( unsigned int ispec=0; ispec<nspec; ispec++ ) {
         BirthRecords *br = patch->vecSpecies[ispec]->birth_records_;
         if( br ) {
-            br->mpi_count_ = br->p_.size();
-            MPI_Isend( &br->mpi_count_, 1, MPI_INT, to, tag + irequest, world_, &patch->requests_[irequest] );
-            if( br->mpi_count_ > 0 ) {
+            br->n_recorded_p_ = br->p_.size();
+            MPI_Isend( &br->n_recorded_p_, 1, MPI_INT, to, tag + irequest, world_, &patch->requests_[irequest] );
+            if( br->n_recorded_p_ > 0 ) {
                 br->mpi_type_ = createMPIparticles( &br->p_ );
                 isend( &br->p_, to, tag + irequest + 1, br->mpi_type_, patch->requests_[irequest+1] );
             }
