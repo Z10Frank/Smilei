@@ -14,7 +14,7 @@ install_gpu:
   tags:
     - ruche-ci-gpu
   only: 
-    - develop
+    - DiagNewParticles_correction
   script:
     - source /gpfs/users/prouveurc/myhdf5_env_smilei.sh
     # Move in test dir  -> NOT needed, by default the runner will give the order to git clone the repo and cd inside before our instructions (in "script")
@@ -29,7 +29,7 @@ test_gpu:
   tags:
     - ruche-ci-gpu
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - source /gpfs/users/prouveurc/myhdf5_env_smilei.sh
     - module load anaconda3/2023.09-0/none-none
@@ -42,7 +42,7 @@ test_gpu:
 install_cpu:
   stage: install
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Force workdir cleaning in case of retried
     - echo "CI_PIPELINE_ID = " $CI_PIPELINE_ID
@@ -59,7 +59,7 @@ install_cpu:
 compile_default:
   stage: compile_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -69,7 +69,7 @@ compile_default:
 runQuick:
   stage: run_quick
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -79,7 +79,7 @@ runQuick:
 run1D:
   stage: run_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -90,7 +90,7 @@ run1D:
 run2D:
   stage: run_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -103,7 +103,7 @@ run2D:
 run3D:
   stage: run_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -117,7 +117,7 @@ run3D:
 runAM:
   stage: run_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -128,7 +128,7 @@ runAM:
 runCollisions:
   stage: run_default
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     # Move in test dir
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
@@ -138,7 +138,7 @@ runCollisions:
 compile_picsar:
   stage: compile_picsar
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei
     - make clean
@@ -147,7 +147,7 @@ compile_picsar:
 run_picsar:
   stage: run_picsar
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei/validation
     - python validation.py -k picsar -b "tstAM_picsar_04_laser_wake.py" -m 4 -o 4 -n 1 -v
@@ -155,7 +155,7 @@ run_picsar:
 compile_debug:
   stage: compile_debug
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei
     - make clean
@@ -164,7 +164,7 @@ compile_debug:
 compile_no_mpi_threadmultiple:
   stage: compile_no_mpi_threadmultiple
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei
     - make clean
@@ -173,7 +173,7 @@ compile_no_mpi_threadmultiple:
 compile_no_openmp:
   stage: compile_no_openmp
   only:
-    - develop
+    - DiagNewParticles_correction
   script:
     - cd /sps3/gitlab-runner/$CI_PIPELINE_ID/smilei
     - make clean
