@@ -2333,8 +2333,7 @@ As an example::
   Far from the focal plane, these beams have an intensity distribution with lateral rings/lobes, 
   similar to the diffraction pattern obtained from a circular/square aperture.
   This behavior can be obtained through ``flattened_intensity_position="at_focus"`` in the 
-  following macros, whose other arguments are defined exactly as for a Gaussian beam creator 
-  (but currently the only supported ``incidence_angle`` is 0. (`[0,0]` in 3D), and the laser can be injected only from ``box_side="xmin"``).
+  following macros, whose other arguments are defined exactly as for a Gaussian beam creator.
 
   The focusing of these flattened Gaussian beams through a thin lens yields a paraxial 
   laser model that can describe the focusing of high intensity laser pulses more realistically 
@@ -2357,6 +2356,7 @@ As an example::
           omega            = 1.,
           focus            = [50.],
           waist            = 3.,
+          incidence_angle  = 0.,
           polarization_phi = 0.,
           ellipticity      = 0.,
           time_envelope    = tconstant(),
@@ -2385,8 +2385,9 @@ As an example::
               box_side         = "xmin",
               a0               = 1.,
               omega            = 1.,
-              focus            = [50.],
+              focus            = [50., 40., 40.],
               waist            = 3.,
+              incidence_angle  = [0., 0.1],
               polarization_phi = 0.,
               ellipticity      = 0.,
               time_envelope    = tconstant(),
