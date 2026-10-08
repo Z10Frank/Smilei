@@ -2945,54 +2945,6 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
         ellipticity                  = ellipticity
     )
 
-# Define the tools for the propagation of a laser profile
-try:
-    import numpy as np
-    
-    _N_LaserOffset = 0
-    
-    def LaserOffset(box_side="xmin", space_time_profile=[], offset=0., angle=0., extra_envelope=lambda *a:1.,
-            fft_time_window=None, fft_time_step=None, keep_n_strongest_modes=100,
-            number_of_processes=None, file=None):
-        global _N_LaserOffset
-        
-        file_ = file or ('LaserOffset'+str(_N_LaserOffset)+'.h5')
-        
-        L = Laser(
-            box_side = box_side,
-            file = file_,
-        )
-        
-        L._offset = offset
-        L._extra_envelope = extra_envelope
-        L._profiles = space_time_profile
-        L._fft_time_window = fft_time_window or Main.simulation_time
-        L._fft_time_step = fft_time_step or Main.timestep
-        L._keep_n_strongest_modes = keep_n_strongest_modes
-        L._angle = angle
-        L._number_of_processes = number_of_processes
-        if file:
-            if not os.path.exists(file):
-                raise Exception("File not found or not accessible: "+file)
-            L._propagate = False
-        else:
-            L._propagate = True
-        
-        _N_LaserOffset += 1
-
-except:
-    
-    def LaserOffset(box_side="xmin", space_time_profile=[], offset=0., fft_time_window=None, extra_envelope=lambda *a:1., keep_n_strongest_modes=100, angle=0., number_of_processes=None, file=None):
-        L = Laser(
-            box_side = box_side,
-            file = "none",
-            time_envelope = extra_envelope
-        )
-        print("WARNING: LaserOffset unavailable because numpy was not found")
-
-
-
-
 def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
         polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0., N=0,
         envelope_solver = "explicit_reduced_dispersion",
@@ -3116,6 +3068,51 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
     )
+
+# Define the tools for the propagation of a laser profile
+try:
+    import numpy as np
+
+    _N_LaserOffset = 0
+
+    def LaserOffset(box_side="xmin", space_time_profile=[], offset=0., angle=0., extra_envelope=lambda *a:1.,
+            fft_time_window=None, fft_time_step=None, keep_n_strongest_modes=100,
+            number_of_processes=None, file=None):
+        global _N_LaserOffset
+
+        file_ = file or ('LaserOffset'+str(_N_LaserOffset)+'.h5')
+
+        L = Laser(
+            box_side = box_side,
+            file = file_,
+        )
+
+        L._offset = offset
+        L._extra_envelope = extra_envelope
+        L._profiles = space_time_profile
+        L._fft_time_window = fft_time_window or Main.simulation_time
+        L._fft_time_step = fft_time_step or Main.timestep
+        L._keep_n_strongest_modes = keep_n_strongest_modes
+        L._angle = angle
+        L._number_of_processes = number_of_processes
+        if file:
+            if not os.path.exists(file):
+                raise Exception("File not found or not accessible: "+file)
+            L._propagate = False
+        else:
+            L._propagate = True
+
+        _N_LaserOffset += 1
+
+except:
+
+    def LaserOffset(box_side="xmin", space_time_profile=[], offset=0., fft_time_window=None, extra_envelope=lambda *a:1., keep_n_strongest_modes=100, angle=0., number_of_processes=None, file=None):
+        L = Laser(
+            box_side = box_side,
+            file = "none",
+            time_envelope = extra_envelope
+        )
+        print("WARNING: LaserOffset unavailable because numpy was not found")
 
 
 

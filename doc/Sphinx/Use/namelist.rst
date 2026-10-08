@@ -2758,11 +2758,26 @@ A flattened Gaussian beam envelope can be defined in 2D::
         flattened_intensity_position="far_from_focus",
     )
 
-A circular flattened Gaussian beam envelope can be defined in 3D::
+A circular flattened Gaussian beam envelope can be defined in 3D as well::
 
     LaserEnvelopeCircularFlattenedGaussian3D(
         a0              = 1.,
         focus           = [150., 40., 40.],
+        waist           = 30.,
+        time_envelope   = tgaussian(center=150., fwhm=40.),
+        envelope_solver = 'explicit',
+        Envelope_boundary_conditions = [ ["reflective"] ],
+        polarization_phi = 0.,
+        ellipticity      = 0.,
+        N                = 10,
+        flattened_intensity_position="far_from_focus",
+    )
+
+A circular flattened Gaussian beam envelope can be defined in ``AMcylindrical`` geometry as well::
+
+    LaserEnvelopeCircularFlattenedGaussianAM(
+        a0              = 1.,
+        focus           = [150.],
         waist           = 30.,
         time_envelope   = tgaussian(center=150., fwhm=40.),
         envelope_solver = 'explicit',
