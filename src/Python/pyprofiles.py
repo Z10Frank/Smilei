@@ -1590,10 +1590,10 @@ def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3
     # Return the complex envelope, including the temporal envelope
     if (box_side=="inside"):
         def envelope_profile(x,y,t):
-            return rectangular_flattened_Gaussian_beam2D(x,y)*(time_envelope)(t))
+            return rectangular_flattened_Gaussian_beam2D(x,y)*(time_envelope)(t)
     elif (box_side=="xmin"):
         def envelope_profile(y,t):
-            return rectangular_flattened_Gaussian_beam2D(0,y)*(time_envelope)(t))
+            return rectangular_flattened_Gaussian_beam2D(0,y)*(time_envelope)(t)
     else:
         print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
 
@@ -3003,7 +3003,7 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
                 L[n] = (((2*n - 1) - x) * L[n-1] - (n - 1) * L[n-2]) / n
         return L
 
-    # circular flattened Gauss definition in AM Cartesian geometry
+    # circular flattened Gaussian definition in AM Cartesian geometry
     def circular_flattened_Gaussian_beamAM(x,r):
 
         # compute constant terms at x=0
@@ -3037,9 +3037,7 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
 
         return a0*omega*polarization_amplitude_factor*LG_field_along_r/normalization_constant
 
-    # define the Laser block through space_time_profile_AM
-
-
+    # define the profile for the LaserEnvelope block
     if (box_side=="inside"):
         def envelope_profile(x,r,t):
             return circular_flattened_Gaussian_beamAM(x,r)*vectorize(time_envelope)(t)
