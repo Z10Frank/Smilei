@@ -814,6 +814,20 @@ void SmileiMPI::isend_species( Patch *patch, int to, int &irequest, int tag, Par
     }
     MPI_Isend( &patch->buffer_scalars_particles[0], patch->buffer_scalars_particles.size(), MPI_DOUBLE, to, tag + irequest, world_, &patch->requests_[irequest] );
     irequest ++;
+    
+    // Send the birth records not yet written by DiagNewParticles
+    for( unsigned int ispec=0; ispec<nspec; ispec++ ) {
+        BirthRecords *br = patch->vecSpecies[ispec]->birth_records_;
+        if( br ) {
+            br->n_recorded_p_ = br->p_.size();
+            MPI_Isend( &br->n_recorded_p_, 1, MPI_INT, to, tag + irequest, world_, &patch->requests_[irequest] );
+            if( br->n_recorded_p_ > 0 ) {
+                br->mpi_type_ = createMPIparticles( &br->p_ );
+                isend( &br->p_, to, tag + irequest + 1, br->mpi_type_, patch->requests_[irequest+1] );
+            }
+            irequest += 2;
+        }
+    }
 }
 
 void SmileiMPI::isend_fields( Patch *patch, int to, int &irequest, int tag, Params &params, bool send_xmax_bc )
@@ -853,6 +867,11 @@ void SmileiMPI::waitall( Patch *patch )
     }
 
     for( int ispec=0 ; ispec<( int )patch->vecSpecies.size() ; ispec++ ) {
+        BirthRecords *br = patch->vecSpecies[ispec]->birth_records_;
+        if( br && br->mpi_type_ != MPI_DATATYPE_NULL ) {
+            MPI_Type_free( &( br->mpi_type_ ) );
+            br->mpi_type_ = MPI_DATATYPE_NULL;
+        }
         if( patch->vecSpecies[ispec]->getNbrOfParticles() > 0 ) {
             if( patch->vecSpecies[ispec]->exchangePatch != MPI_DATATYPE_NULL ) {
                 MPI_Type_free( &( patch->vecSpecies[ispec]->exchangePatch ) );
@@ -972,6 +991,23 @@ void SmileiMPI::recv_species( Patch *patch, int from, int &tag, Params &params )
         patch->vecSpecies[ispec]->nrj_mw_inj    = patch->buffer_scalars_particles[i+3];
         if( params.has_MC_radiation_ || params.has_LL_radiation_ || params.has_Niel_radiation_ ) {
             patch->vecSpecies[ispec]->nrj_radiated_ = patch->buffer_scalars_particles[i+4];
+        }
+    }
+    
+    // Receive the birth records not yet written by DiagNewParticles
+    for( unsigned int ispec=0; ispec<nspec; ispec++ ) {
+        BirthRecords *br = patch->vecSpecies[ispec]->birth_records_;
+        if( br ) {
+            int nbrOfBirthsRecv;
+            MPI_Recv( &nbrOfBirthsRecv, 1, MPI_INT, from, tag, world_, &status );
+            br->birth_time_.resize( nbrOfBirthsRecv );
+            br->p_.initialize( nbrOfBirthsRecv, *patch->vecSpecies[ispec]->particles );
+            if( nbrOfBirthsRecv > 0 ) {
+                recvParts = createMPIparticles( &br->p_ );
+                recv( &br->p_, from, tag+1, recvParts );
+                MPI_Type_free( &( recvParts ) );
+            }
+            tag += 2;
         }
     }
 }
