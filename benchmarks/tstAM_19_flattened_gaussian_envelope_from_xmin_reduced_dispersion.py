@@ -105,7 +105,7 @@ time_envelope                      = tgaussian(center=center_laser, fwhm=laser_f
 
 LaserEnvelopeCircularFlattenedGaussianAM(
     a0               = a0,
-    N                = N,
+    order_N          = N,
     waist            = waist_0,
     focus            = focus,
     omega            = omega,

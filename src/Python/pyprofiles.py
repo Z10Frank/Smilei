@@ -580,14 +580,14 @@ def LaserGaussian2D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
 
 def LaserSquareFlattenedGaussian2D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., incidence_angle=0.,
         polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0.,
-        N=10,flattened_intensity_position="far_from_focus"):
+        order_N=10,flattened_intensity_position="far_from_focus"):
     import numpy as np
     import scipy.special as sp
     from math import cos, sin, tan
     global Main
     assert len(Main)==1, "LaserSquareFlattenedGaussian2D profile has been defined before `Main()`"
     assert len(focus)==2, "LaserSquareFlattenedGaussian2D: focus must be a list of length 2."
-    assert isinstance(N, int), "LaserSquareFlattenedGaussian2D: N must be an integer."
+    assert isinstance(order_N, int), "LaserSquareFlattenedGaussian2D: order_N must be an integer."
     assert (
             flattened_intensity_position == "far_from_focus"
             or flattened_intensity_position == "at_focus"
@@ -637,18 +637,18 @@ def LaserSquareFlattenedGaussian2D( box_side="xmin", a0=1., omega=1., focus=None
 
     # Waist and Rayleigh length
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
     # Effective Rayleigh length, normalized
     x_R  = omega * waist_corrected**2/2.
 
     # Store the Hermite-Gauss (HG) mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         # computing this in log scale and then using the exponential
-        # avoids overflow for high N
+        # avoids overflow for high order_N
         # remember that gamma(n+1)=n!
         log_terms = (
                     -3*m_values*np.log(2.)
@@ -661,36 +661,36 @@ def LaserSquareFlattenedGaussian2D( box_side="xmin", a0=1., omega=1., focus=None
     # The HG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "far_from_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalizing quantity to have a normalized peak field before the multiplication by a0
     # This recursive way of computing it avoids the overflow given by a brute force calculation
     # of the factorial
-    def S_N(N):
+    def S_N(order_N):
         S = 0.0
         k = 1.0  # k_0 = 1
-        for m in range(0, N+1):
+        for m in range(0, order_N+1):
             S += k
             # update a -> a_{m+1}
             k *= (2*m + 1) / (2*(m + 1))
         return S
 
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else S_N(N)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else S_N(order_N)
 
     # Store Hermite polynomials
-    def even_hermite_polynomials(x, N):
+    def even_hermite_polynomials(x, order_N):
         # Returns an array of Hermite polynomials with even index using recursion relations
-        H_even = np.empty((N+1,) + np.shape(x), dtype=float)
+        H_even = np.empty((order_N+1,) + np.shape(x), dtype=float)
         H0 = np.ones_like(x)
         H_even[0] = H0
-        if N == 0:
+        if order_N == 0:
             return H_even
         H1   = 2*x
         Hnm2 = H0
         Hnm1 = H1
         even = 1
 
-        for k in range(1, 2*N):
+        for k in range(1, 2*order_N):
             Hn = 2*x*Hnm1 - 2*k*Hnm2
             Hnm2 = Hnm1
             Hnm1 = Hn
@@ -729,15 +729,15 @@ def LaserSquareFlattenedGaussian2D( box_side="xmin", a0=1., omega=1., focus=None
         # Precompute the Hermite polynomials
         mask           = exp_transverse > 0.
         scaled_transverse_coordinate = np.sqrt(2) * transverse_coordinate / w
-        H = np.zeros((N+1,) + transverse_coordinate.shape, dtype=float)
+        H = np.zeros((order_N+1,) + transverse_coordinate.shape, dtype=float)
         if np.any(mask):
             # Only evaluate Hermite polynomials where the Gaussian has not underflown to zero
-            H[:, mask] = even_hermite_polynomials(scaled_transverse_coordinate[mask], N)
+            H[:, mask] = even_hermite_polynomials(scaled_transverse_coordinate[mask], order_N)
             # Convert the nan to zero, that can happen only when the exponential is ~0
             H          = np.nan_to_num(H,nan=0.0,posinf=0.0,neginf=0.0)
         # Sum the HG modes parts that change for each mode
         HG_field = np.zeros(transverse_coordinate.shape, dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             HG_field += cn[n] * H[n] * np.exp(-1j*(2*n+1/2.)*Gouy_phase_arg)
         # Multiply the result by the part in common for all modes
         HG_field = HG_field * exp_transverse * curved_phase * np.sqrt(waist_corrected/w)
@@ -1474,13 +1474,13 @@ def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelop
         ellipticity                  = ellipticity
     )
 
-def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3., N=10, time_envelope=tconstant(),
+def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3., order_N=10, time_envelope=tconstant(),
         envelope_solver = "explicit",box_side = "inside",Envelope_boundary_conditions = [["reflective"]],
         polarization_phi = 0.,ellipticity = 0.,flattened_intensity_position="far_from_focus"):
     import numpy as np
     import scipy.special as sp
     assert len(focus)==2, "LaserEnvelopeSquareFlattenedGaussian2D: focus must be a list of length 2."
-    assert isinstance(N, int), "LaserEnvelopeSquareFlattenedGaussian2D: N must be an integer."
+    assert isinstance(order_N, int), "LaserEnvelopeSquareFlattenedGaussian2D: order_N must be an integer."
     assert (
             flattened_intensity_position == "far_from_focus"
             or flattened_intensity_position == "at_focus"
@@ -1490,8 +1490,8 @@ def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3
 
     # Effective waist
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
 
     # Effective Rayleigh length, normalized
@@ -1501,9 +1501,9 @@ def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3
     polarization_amplitude_factor = 1/np.sqrt(1.+ellipticity**2)
 
     # Store the Hermite-Gauss (HG) mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         # computing this in log scale and then using the exponential
         # avoids overflow for high N
         # remember that gamma(n+1)=n!
@@ -1518,36 +1518,36 @@ def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3
     # The HG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "far_from_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalizing quantity to have a normalized peak before the multiplication by a0
     # This recursive way of computing it avoids the overflow given by a brute force calculation
     # of the factorial
-    def S_N(N):
+    def S_N(order_N):
         S = 0.0
         k = 1.0  # k_0 = 1
-        for m in range(0, N+1):
+        for m in range(0, order_N+1):
             S += k
             # update a -> a_{m+1}
             k *= (2*m + 1) / (2*(m + 1))
         return S
 
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else S_N(N)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else S_N(order_N)
 
     # Recursive definition of the HG modes with even index
-    def even_hermite_polynomials(x, N):
+    def even_hermite_polynomials(x, order_N):
         # Returns an array of Hermite polynomials with even index using recursion relations
-        H_even = np.empty((N+1,) + np.shape(x), dtype=float)
+        H_even = np.empty((order_N+1,) + np.shape(x), dtype=float)
         H0 = np.ones_like(x)
         H_even[0] = H0
-        if N == 0:
+        if order_N == 0:
             return H_even
         H1   = 2*x
         Hnm2 = H0
         Hnm1 = H1
         even = 1
 
-        for k in range(1, 2*N):
+        for k in range(1, 2*order_N):
             Hn = 2*x*Hnm1 - 2*k*Hnm2
             Hnm2 = Hnm1
             Hnm1 = Hn
@@ -1572,15 +1572,15 @@ def LaserEnvelopeSquareFlattenedGaussian2D( a0=1., omega=1., focus=None, waist=3
         # Precompute the Hermite polynomials
         mask             = exp_along_y > 0.
         y_scaled         = np.sqrt(2) * (y-focus[1]) / w
-        H = np.zeros((N+1,) + y.shape, dtype=float)
+        H = np.zeros((order_N+1,) + y.shape, dtype=float)
         if np.any(mask):
             # Only evaluate Hermite polynomials where the Gaussian has not underflown to zero
-            H[:, mask]   = even_hermite_polynomials(y_scaled[mask], N)
+            H[:, mask]   = even_hermite_polynomials(y_scaled[mask], order_N)
             # Convert the nan to zero, that can happen only when the exponential is ~0
             H            = np.nan_to_num(H,nan=0.0,posinf=0.0,neginf=0.0)
         # Sum the HG modes parts that change for each mode
         HG_field_along_y = np.zeros_like(y,dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             HG_field_along_y += cn[n] * H[n] * np.exp(-1j*(2*n+1/2.)*Gouy_phase_arg)
         # Multiply by the part in common for all modes
         HG_field_along_y = HG_field_along_y * exp_along_y * curved_phase_y * np.sqrt(waist_corrected/w)
@@ -1678,7 +1678,7 @@ def LaserGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
     )
 
 def LaserCircularFlattenedGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,incidence_angle=[0.,0.],
-        polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0.,N=10,flattened_intensity_position="far_from_focus"):
+        polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0.,order_N=10,flattened_intensity_position="far_from_focus"):
     import numpy as np
     import scipy.special as sp
     from math import cos, sin
@@ -1686,7 +1686,7 @@ def LaserCircularFlattenedGaussian3D( box_side="xmin", a0=1., omega=1., focus=No
     assert len(Main)==1, "LaserCircularFlattenedGaussian3D profile has been defined before `Main()`"
     assert len(focus)==3, "LaserCircularFlattenedGaussian3D: focus must be a list of length 3."
     assert len(incidence_angle)==2, "LaserCircularFlattenedGaussian3D: incidence_angle must be a list of length 2."
-    assert isinstance(N, int), "LaserCircularFlattenedGaussian3D: N must be an integer."
+    assert isinstance(order_N, int), "LaserCircularFlattenedGaussian3D: order_N must be an integer."
     assert flattened_intensity_position in ("far_from_focus", "at_focus"), (
     "LaserCircularFlattenedGaussian3D: flattened_intensity_position must be either 'at_focus' or 'far_from_focus'.")
 
@@ -1748,32 +1748,32 @@ def LaserCircularFlattenedGaussian3D( box_side="xmin", a0=1., omega=1., focus=No
 
     # Effective waist
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
 
     # Effective Rayleigh length, normalized
     x_R  = omega * waist_corrected**2/2.
 
     # Store the Laguerre-Gauss (LG) mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         cn[n]    = np.sum((1./2)**m_values * sp.binom(m_values,n))
 
     # The LG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "at_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalization constant to have a0 as peak field
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (N+1)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (order_N+1)
 
     # Store Laguerre polynomials
-    def store_Laguerre_polynomials(x, N):
+    def store_Laguerre_polynomials(x, order_N):
         # Returns an array of Laguerre polynomials using recursion relations
-        L = np.empty((N+1,) + np.shape(x), dtype=float)
-        for n in range(0, N+1):
+        L = np.empty((order_N+1,) + np.shape(x), dtype=float)
+        for n in range(0, order_N+1):
             if n==0:
                 L[n] = 1.
             elif n==1:
@@ -1809,15 +1809,15 @@ def LaserCircularFlattenedGaussian3D( box_side="xmin", a0=1., omega=1., focus=No
         # Precompute the Laguerre polynomials
         mask             = exp_along_r > 0.
         r_sq_scaled      = 2 * radial_coordinate**2 / w**2
-        L = np.zeros((N+1,) + radial_coordinate.shape, dtype=float)
+        L = np.zeros((order_N+1,) + radial_coordinate.shape, dtype=float)
         if np.any(mask):
             # Only evaluate Laguerre polynomials where the Gaussian has not underflown to zero
-            L[:, mask]   = store_Laguerre_polynomials(r_sq_scaled[mask], N)
+            L[:, mask]   = store_Laguerre_polynomials(r_sq_scaled[mask], order_N)
             # Convert the nan to zero, that can happen only when the exponential is ~0
             L            = np.nan_to_num(L,nan=0.0,posinf=0.0,neginf=0.0)
         # Sum the LG modes parts that change for each mode
         LG_field_along_r = np.zeros(radial_coordinate.shape, dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             LG_field_along_r += cn[n] * L[n] * np.exp(-1j*(2*n+1.)*Gouy_phase_arg)
         # Multiply by the part in common for all modes
         LG_field_along_r = LG_field_along_r * exp_along_r * curved_phase_r * (waist_corrected/w)
@@ -2652,42 +2652,42 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
 
 def LaserEnvelopeCircularFlattenedGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
         envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]], box_side = "inside",
-        polarization_phi = 0.,ellipticity = 0.,N=10,flattened_intensity_position="far_from_focus"):
+        polarization_phi = 0.,ellipticity = 0.,order_N=10,flattened_intensity_position="far_from_focus"):
     import numpy as np
     import scipy.special as sp
     assert len(focus)==3, "LaserEnvelopeCircularFlattenedGaussian3D: focus must be a list of length 3."
-    assert isinstance(N, int), "LaserEnvelopeCircularFlattenedGaussian3D: N must be an integer."
+    assert isinstance(order_N, int), "LaserEnvelopeCircularFlattenedGaussian3D: order_N must be an integer."
     assert flattened_intensity_position in ("far_from_focus", "at_focus"), (
     "LaserEnvelopeCircularFlattenedGaussian3D: flattened_intensity_position must be either 'at_focus' or 'far_from_focus'.")
 
     # Effective waist, normalized
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
 
     # Effective Rayleigh length, normalized
     x_R  = omega * waist_corrected**2/2.
 
     # Store the Laguerre-Gauss (LG) mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         cn[n]    = np.sum((1./2)**m_values * sp.binom(m_values,n))
 
     # The LG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "at_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalization constant to have a0 as peak field
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (N+1)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (order_N+1)
 
     # Store Laguerre polynomials
-    def store_Laguerre_polynomials(x, N):
+    def store_Laguerre_polynomials(x, order_N):
         # Returns an array of Laguerre polynomials using recursion relations
-        L = np.empty((N+1,) + np.shape(x), dtype=float)
-        for n in range(0, N+1):
+        L = np.empty((order_N+1,) + np.shape(x), dtype=float)
+        for n in range(0, order_N+1):
             if n==0:
                 L[n] = 1.
             elif n==1:
@@ -2715,15 +2715,15 @@ def LaserEnvelopeCircularFlattenedGaussian3D( a0=1., omega=1., focus=None, waist
         # Precompute the Laguerre polynomials
         mask           = exp_along_r > 0.
         r_sq_scaled    = 2 * r**2 / w**2
-        L = np.zeros((N+1,) + r.shape, dtype=float)
+        L = np.zeros((order_N+1,) + r.shape, dtype=float)
         if np.any(mask):
             # Only evaluate Laguerre polynomials where the Gaussian has not underflown to zero
-            L[:,mask]  = store_Laguerre_polynomials(r_sq_scaled[mask], N)
+            L[:,mask]  = store_Laguerre_polynomials(r_sq_scaled[mask], order_N)
             # Convert the nan to zero, that can happen only when the exponential is ~0
             L          = np.nan_to_num(L,nan=0.0,posinf=0.0,neginf=0.0) 
         # Sum the LG modes parts that change for each mode
         LG_field_along_r = np.zeros_like(r,dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             LG_field_along_r += cn[n] * L[n] * np.exp(-1j*(2*n+1.)*Gouy_phase_arg)
         # Multiply by the part in common for all modes
         LG_field_along_r = LG_field_along_r * exp_along_r * curved_phase_r * (waist_corrected/w)
@@ -2784,12 +2784,12 @@ def LaserGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
 
 def LaserCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
         polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0.,
-        N=10,flattened_intensity_position="far_from_focus"):
+        order_N=10,flattened_intensity_position="far_from_focus"):
     import numpy as np
     import scipy.special as sp
     assert len(focus)==1, "LaserCircularFlattenedGaussianAM: focus must be a list of length 1."
     assert box_side == "xmin", "LaserCircularFlattenedGaussianAM: currently only box_side=`xmin` is supported."
-    assert isinstance(N, int), "LaserCircularFlattenedGaussianAM: N must be an integer."
+    assert isinstance(order_N, int), "LaserCircularFlattenedGaussianAM: order_N must be an integer."
     assert flattened_intensity_position in ("far_from_focus", "at_focus"), (
     "LaserCircularFlattenedGaussianAM: flattened_intensity_position must be either 'at_focus' or 'far_from_focus'.")
 
@@ -2801,31 +2801,31 @@ def LaserCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., focus=No
 
     # Effective waist, normalized
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
     # Effective Rayleigh length, normalized
     x_R  = omega * waist_corrected**2/2.
 
     # Store the Laguerre-Gauss (LG) mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         cn[n]    = np.sum((1./2)**m_values * sp.binom(m_values,n))
 
     # The LG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "at_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalization constant to have a0 as peak field
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (N+1)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (order_N+1)
 
     # Store Laguerre polynomials
-    def store_Laguerre_polynomials(x, N):
+    def store_Laguerre_polynomials(x, order_N):
         # Returns an array of Laguerre polynomials using recursion relations
-        L = np.empty((N+1,) + np.shape(x), dtype=float)
-        for n in range(0, N+1):
+        L = np.empty((order_N+1,) + np.shape(x), dtype=float)
+        for n in range(0, order_N+1):
             if n==0:
                 L[n] = 1.
             elif n==1:
@@ -2852,15 +2852,15 @@ def LaserCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., focus=No
         # Precompute the Laguerre polynomials
         mask             = exp_along_r > 0.
         r_sq_scaled      = 2 * r**2 / w**2
-        L = np.zeros((N+1,) + r.shape, dtype=float)
+        L = np.zeros((order_N+1,) + r.shape, dtype=float)
         if np.any(mask):
             # Only evaluate Laguerre polynomials where the Gaussian has not underflown to zero
-            L[:, mask]   = store_Laguerre_polynomials(r_sq_scaled[mask], N)
+            L[:, mask]   = store_Laguerre_polynomials(r_sq_scaled[mask], order_N)
             # convert the nan to zero, that can happen only when the exponential is ~0
             L            = np.nan_to_num(L,nan=0.0,posinf=0.0,neginf=0.0)
         # Sum the LG modes parts that change for each mode
         LG_field_along_r = np.zeros_like(r,dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             LG_field_along_r += cn[n] * L[n] * np.exp(-1j*(2*n+1.)*Gouy_phase_arg)
         # Multiply by the part in common for all modes
         LG_field_along_r = LG_field_along_r * exp_along_r * curved_phase_r * (waist_corrected/w)
@@ -2946,7 +2946,7 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
     )
 
 def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
-        polarization_phi=0., ellipticity=0., time_envelope=tconstant(), N=0,
+        polarization_phi=0., ellipticity=0., time_envelope=tconstant(), order_N=0,
         envelope_solver = "explicit",
         Envelope_boundary_conditions = [["reflective"]],
         Env_pml_sigma_parameters = [[0.90,2],[10.0,2],[10.0,2]],
@@ -2960,7 +2960,7 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
     from numpy import exp, sqrt, arctan, vectorize
 
     assert len(focus)==1, "LaserEnvelopeCircularFlattenedGaussianAM: focus must be a list of length 1."
-    assert isinstance(N, int), "LaserEnvelopeCircularFlattenedGaussianAM: N must be an integer."
+    assert isinstance(order_N, int), "LaserEnvelopeCircularFlattenedGaussianAM: order_N must be an integer."
     assert box_side in ("xmin", "inside")
     assert flattened_intensity_position in ("far_from_focus", "at_focus"), (
     "LaserEnvelopeCircularFlattenedGaussianAM: flattened_intensity_position must be either 'at_focus' or 'far_from_focus'.")
@@ -2970,31 +2970,31 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
 
     # waist and Rayleigh length
     waist_corrected = (
-                       waist * np.sqrt(N + 1) if flattened_intensity_position == "far_from_focus"
-                       else waist / np.sqrt(N + 1)
+                       waist * np.sqrt(order_N + 1) if flattened_intensity_position == "far_from_focus"
+                       else waist / np.sqrt(order_N + 1)
                        )
 
     x_R  = omega * waist_corrected**2/2. # Rayleigh length, normalized
 
     # store the LG mode coefficients
-    cn = np.zeros(N+1)
-    for n in range(N+1):
-        m_values = np.arange(n, N+1)
+    cn = np.zeros(order_N+1)
+    for n in range(order_N+1):
+        m_values = np.arange(n, order_N+1)
         cn[n]    = np.sum((1./2)**m_values * sp.binom(m_values,n))
 
     # the LG mode coefficients have alternating signs
     # if the flattened profile is far from focus
     if flattened_intensity_position == "at_focus":
-        cn = cn*(-1.)**np.arange(N+1)
+        cn = cn*(-1.)**np.arange(order_N+1)
 
     # Normalization constant to have a0 as peak field
-    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (N+1)
+    normalization_constant = 1. if (flattened_intensity_position=="at_focus") else (order_N+1)
 
     # store Laguerre polynomials
-    def Laguerre_polynomials(x, N):
+    def Laguerre_polynomials(x, order_N):
         # Returns an array of Laguerre polynomials using recursion relations
-        L = np.empty((N+1,) + np.shape(x), dtype=float)
-        for n in range(0, N+1):
+        L = np.empty((order_N+1,) + np.shape(x), dtype=float)
+        for n in range(0, order_N+1):
             if n==0:
                 L[n] = 1.
             elif n==1:
@@ -3029,7 +3029,7 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
 
         # sum the LG modes parts that change for each mode
         LG_field_along_r = np.zeros_like(r,dtype=complex)
-        for n in range(0, N+1):
+        for n in range(0, order_N+1):
             LG_field_along_r += cn[n] * L[n] * np.exp(-1j*(2*n+1.)*Gouy_phase_arg)
 
         # multiply by the part in common for all modes

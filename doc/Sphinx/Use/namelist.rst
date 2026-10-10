@@ -2328,10 +2328,10 @@ As an example::
   In `F. Gori, Optics Communications (1994) <https://www.sciencedirect.com/science/article/abs/pii/0030401894903425>`_ a type of 
   paraxial laser beam with a flattened intensity profile with characteristic transverse size ``waist`` 
   at the focal plane was introduced.
-  This field distribution is obtained through the sum of ``N`` paraxial modes 
+  This field distribution is obtained through the sum of ``order_N`` paraxial modes 
   (Laguerre-Gauss for circular beams, or Hermite-Gauss for square beams as in 
   `S.-A. Amarande, High Power Lasers - Science and Engineering (1996) <https://doi.org/10.1007/978-94-015-8725-9_22>`_).
-  A flattened Gaussian beam with order ``N=0`` corresponds to a classic Gaussian beam.
+  A flattened Gaussian beam with order ``order_N=0`` corresponds to a classic Gaussian beam.
 
   Far from the focal plane, these beams have an intensity distribution with lateral rings/lobes, 
   similar to the diffraction pattern obtained from a circular/square aperture.
@@ -2346,11 +2346,11 @@ As an example::
   has the opposite behavior: a flattened intensity profile far from focus
   (with characteristic transverse size equal to the waist at that position of a Gaussian beam with a given ``waist``), 
   and an intensity distribution with lateral rings/lobes at the focal plane. 
-  Again, for ``N=0`` the behavior is the same as of a Gaussian beam. For high values 
-  of ``N``, the behavior of a circular flattened Gaussian beam tends to the one of an Airy beam. 
+  Again, for ``order_N=0`` the behavior is the same as of a Gaussian beam. For high values 
+  of ``order_N``, the behavior of a circular flattened Gaussian beam tends to the one of an Airy beam. 
   Note that in this case the ``waist`` is an effective waist for the calculation 
   of the transverse size far from focus, and corresponds to the conventional definition of beam waist 
-  at focus only for ``N=0`` (i.e. for a Gaussian beam).
+  at focus only for ``order_N=0`` (i.e. for a Gaussian beam).
 
 
   In ``2Dcartesian geometry`` the laser creator for a flattened Gaussian beam is::
@@ -2365,7 +2365,7 @@ As an example::
           polarization_phi = 0.,
           ellipticity      = 0.,
           time_envelope    = tconstant(),
-          N                = 10,
+          order_N          = 10,
           flattened_intensity_position="far_from_focus"
       )
 
@@ -2380,7 +2380,7 @@ As an example::
           polarization_phi = 0.,
           ellipticity      = 0.,
           time_envelope    = tconstant(),
-          N                = 10,
+          order_N          = 10,
           flattened_intensity_position="far_from_focus"
       )
 
@@ -2396,13 +2396,13 @@ As an example::
               polarization_phi = 0.,
               ellipticity      = 0.,
               time_envelope    = tconstant(),
-              N                = 10,
+              order_N          = 10,
               flattened_intensity_position="far_from_focus"
           )
 
   Compared to the creators for Gaussian beams two additional arguments are present:
 
-    .. py:data:: N
+    .. py:data:: order_N
 
       :type: an integer greater or equal than 0.
       :default:  10
@@ -2759,7 +2759,7 @@ A flattened Gaussian beam envelope can be defined in 2D::
         Envelope_boundary_conditions = [ ["reflective"] ],
         polarization_phi = 0.,
         ellipticity      = 0.,
-        N                = 10,
+        order_N          = 10,
         flattened_intensity_position="far_from_focus",
     )
 
@@ -2774,7 +2774,7 @@ A circular flattened Gaussian beam envelope can be defined in 3D as well::
         Envelope_boundary_conditions = [ ["reflective"] ],
         polarization_phi = 0.,
         ellipticity      = 0.,
-        N                = 10,
+        order_N          = 10,
         flattened_intensity_position="far_from_focus",
     )
 
@@ -2789,13 +2789,13 @@ A circular flattened Gaussian beam envelope can be defined in ``AMcylindrical`` 
         Envelope_boundary_conditions = [ ["reflective"] ],
         polarization_phi = 0.,
         ellipticity      = 0.,
-        N                = 10,
+        order_N          = 10,
         flattened_intensity_position="far_from_focus",
     )
 
 for these ``LaserEnvelope`` creators, the arguments are defined as for the 
 ``LaserEnvelope`` creators for Gaussian beams, with the two additional arguments
-``N`` and ``flattened_intensity_position`` defined as for the corresponding ``LaserSquareFlattenedGaussian2D``,
+``order_N`` and ``flattened_intensity_position`` defined as for the corresponding ``LaserSquareFlattenedGaussian2D``,
 ``LaserCircularFlattenedGaussian3D`` creators.
 
 
