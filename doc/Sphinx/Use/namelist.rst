@@ -2302,7 +2302,7 @@ As an example::
       ....
   )
 
-.. rubric:: 10. Defining a gaussian wave with Azimuthal Fourier decomposition
+.. rubric:: 10. Defining a Gaussian wave with Azimuthal Fourier decomposition
 
 ..
 
@@ -2321,31 +2321,36 @@ As an example::
 
   Note that here the focus is given in [x] coordinates, since it propagates on the `r=0` axis .
 
-  .. rubric:: 11. Defining flattened Gaussian beams
+.. rubric:: 11. Defining flattened Gaussian beams
 
-  In `this article <https://www.sciencedirect.com/science/article/abs/pii/0030401894903425>`_ a type of 
+..
+
+  In `F. Gori, Optics Communications (1994) <https://www.sciencedirect.com/science/article/abs/pii/0030401894903425>`_ a type of 
   paraxial laser beam with a flattened intensity profile with characteristic transverse size ``waist`` 
   at the focal plane was introduced.
   This field distribution is obtained through the sum of ``N`` paraxial modes 
-  (Laguerre-Gauss for circular beams, or Hermite-Gauss for square beams as in `this article <https://doi.org/10.1007/978-94-015-8725-9_22>`_).
+  (Laguerre-Gauss for circular beams, or Hermite-Gauss for square beams as in 
+  `S.-A. Amarande, High Power Lasers - Science and Engineering (1996) <https://doi.org/10.1007/978-94-015-8725-9_22>`_).
   A flattened Gaussian beam with order ``N=0`` corresponds to a classic Gaussian beam.
 
   Far from the focal plane, these beams have an intensity distribution with lateral rings/lobes, 
   similar to the diffraction pattern obtained from a circular/square aperture.
   This behavior can be obtained through ``flattened_intensity_position="at_focus"`` in the 
-  following macros, whose other arguments are defined exactly as for a Gaussian beam creator.
+  following macros, whose other arguments are defined exactly as for a Gaussian beam Laser creator.
 
   The focusing of these flattened Gaussian beams through a thin lens yields a paraxial 
   laser model that can describe the focusing of high intensity laser pulses more realistically 
-  than a Gaussian beam. This model, described in `this article <https://doi.org/10.1080/09500349708232927>`_ 
+  than a Gaussian beam. This model, described in 
+  `M. Santarsiero, Journal of Modern Optics (1997) <https://doi.org/10.1080/09500349708232927>`_ 
   and obtainable by setting ``flattened_intensity_position="far_from_focus"``, 
   has the opposite behavior: a flattened intensity profile far from focus
   (with characteristic transverse size equal to the waist at that position of a Gaussian beam with a given ``waist``), 
   and an intensity distribution with lateral rings/lobes at the focal plane. 
   Again, for ``N=0`` the behavior is the same as of a Gaussian beam. For high values 
-  of ``N``, the behavior tends to the one of an Airy beam. Note that in this case 
-  the ``waist`` is an effective waist for the calculation of the transverse size far from focus, 
-  and corresponds to the beam waist at focus only for ``N=0``.
+  of ``N``, the behavior of a circular flattened Gaussian beam tends to the one of an Airy beam. 
+  Note that in this case the ``waist`` is an effective waist for the calculation 
+  of the transverse size far from focus, and corresponds to the conventional definition of beam waist 
+  at focus only for ``N=0`` (i.e. for a Gaussian beam).
 
 
   In ``2Dcartesian geometry`` the laser creator for a flattened Gaussian beam is::
