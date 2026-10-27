@@ -2515,6 +2515,80 @@ modulations in the instantaneous angular frequency and phase, for example to def
     can help reduce the computation time by re-using the ``LaserOffset`` computation
     from a previous simulation.
 
+.. rubric:: 13. Defining a laser from a LASY file
+
+..
+
+  In ``"AMcylindrical"`` geometry, a laser can be imported from a file written by
+  `LASY <https://lasydoc.readthedocs.io>`_, a Python library to create and manipulate
+  laser pulses.
+  Currently only LASY files with ``thetaMode`` geometry are supported, which would
+  correspond to a simulation in ``AMcylindrical`` geometry. The laser is introduced using::
+
+    LaserFromLasyAM(
+        filename               = "lasy_laser_00000.h5",
+        N_time                 = 500,
+        omega0_SI              = 2.*math.pi*scipy.constants.c/0.8e-6,
+        reference_frequency_SI = 2.*math.pi*scipy.constants.c/0.8e-6,
+        box_side               = "xmin"
+    )
+
+  A LASY file stores the complex envelope :math:`\tilde{E}` of the electric field (in V/m) as azimuthal modes
+  on a grid of time ``t`` and radius ``r``, together with the laser angular frequency
+  and the polarization vector :math:`(p_x, p_y)` in its transverse plane.
+  The electric field at the boundary is
+  :math:`\mathbf{E} = \mathrm{Re}\left[ \tilde{E}(r,\theta,t)\, e^{-i\omega_0 t}\, (p_x \mathbf{e}_y + p_z \mathbf{e}_z)\right]`,
+  as LASY propagates along its ``z`` axis, whose transverse axes ``(x, y)`` correspond to the ``(y, z)`` axes of Smilei.
+  The magnetic field components :math:`B_r` and :math:`B_\theta` are computed from this field,
+  decomposed in the :py:data:`Main.number_of_AM` azimuthal modes of the simulation, and injected through
+  a ``Laser`` block with ``space_time_profile_AM``.
+  The polarization and azimuthal structure of the field are read from the LASY file.
+
+  This creator must be called after the ``Main`` block, since it reads the
+  :py:data:`timestep`, :py:data:`number_of_AM`, :py:data:`grid_length`,
+  :py:data:`cell_length` and :py:data:`number_of_cells` of the simulation.
+  It requires the python packages *numpy*, *scipy* and *h5py*.
+  During the initialization, the envelope stored in the file is linearly interpolated
+  on the times and radii where the laser is evaluated at the boundary
+  (the carrier oscillation :math:`e^{-i\omega_0 t}` is computed analytically).
+  This precomputation can be costly in memory for large values of :py:data:`N_time`
+  and of the number of cells along ``r``.
+
+  .. py:data:: filename
+
+    :type: string
+
+    The path to the LASY file. The envelope is read at iteration ``0`` of the LASY file.
+
+  .. py:data:: N_time
+
+    :type: integer
+
+    The number of timesteps during which the laser is injected, i.e. the field is zero
+    after ``N_time*timestep``. It should cover the duration of the time axis of the LASY file,
+    whose beginning corresponds to ``t=0`` in the simulation.
+
+.. py:data:: omega0_SI
+
+    :type: float
+
+    The laser angular frequency in SI units (rad/s). A warning is printed if it differs from
+    the angular frequency stored in the LASY file.
+
+  .. py:data:: reference_frequency_SI
+
+    :type: float
+
+    The reference angular frequency of the simulation in SI units (rad/s), used to convert
+    the SI quantities of the LASY file into Smilei units. It should be equal to
+    :py:data:`Main.reference_angular_frequency_SI` when the latter is defined.
+
+  .. py:data:: box_side
+
+    :default: ``"xmin"``
+
+    The side of the box from which the laser is injected. Only ``"xmin"`` is currently supported.
+
 
 ----
 
