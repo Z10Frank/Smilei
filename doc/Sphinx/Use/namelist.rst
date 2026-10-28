@@ -2872,6 +2872,34 @@ for these ``LaserEnvelope`` creators, the arguments are defined as for the
 ``order_N`` and ``flattened_intensity_position`` defined as for the corresponding ``LaserSquareFlattenedGaussian2D``,
 ``LaserCircularFlattenedGaussian3D`` creators.
 
+.. rubric:: 7. Defining a laser from a LASY file
+
+..
+
+In ``"AMcylindrical"`` geometry, a laser envelope can be imported from a file written by
+`LASY <https://lasydoc.readthedocs.io>`_, a Python library to create and manipulate
+laser pulses.
+Currently only LASY files with ``thetaMode`` geometry are supported, which would
+correspond to a simulation in ``AMcylindrical`` geometry. The laser is introduced using::
+
+    LaserEnvelopeFromLasyAM(
+        filename               = "lasy_laser_00000.h5",
+        N_time                 = 500,
+        omega0_SI              = 2.*math.pi*scipy.constants.c/0.8e-6,
+        reference_frequency_SI = 2.*math.pi*scipy.constants.c/0.8e-6,
+        box_side               = "xmin",
+        envelope_solver        = 'explicit',
+        Envelope_boundary_conditions = [ ["reflective"] ],
+        polarization_phi       = 0.,
+        ellipticity            = 0.,
+    )
+
+Only the lowest-order azimuthal mode in the file is used (corresponding to a cylindrically symmetric envelope).
+A warning is printed if more modes are present in the file.
+Since LASY stores the complex envelope of the transverse electric field, 
+this ``LaserEnvelope`` creator converts it to the envelope of the transverse vector potential,
+using Eq. A5 of `F. Massimo et al., Physical Review E (2020) <https://doi.org/10.1103/PhysRevE.102.033204>`_.
+See also the ``Laser`` creator called ``LaserFromLasyAM`` for more details on the import of the laser envelope.
 
 ----
 

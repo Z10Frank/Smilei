@@ -2737,7 +2737,7 @@ def LaserEnvelopeCircularFlattenedGaussian3D( a0=1., omega=1., focus=None, waist
         def envelope_profile(y,z,t):
             return circularFlattenedGaussianBeam3D(0,y,z)*(time_envelope(t))
     else:
-        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
+        print("LaserEnvelopeCircularFlattenedGaussian3D error: box_side must be either 'inside' or 'xmin'. ")
 
     # Create Laser Envelope
     LaserEnvelope(
@@ -3045,7 +3045,7 @@ def LaserEnvelopeCircularFlattenedGaussianAM( box_side="xmin", a0=1., omega=1., 
         def envelope_profile(r,t):
             return circular_flattened_Gaussian_beamAM(0,r)*vectorize(time_envelope)(t)
     else:
-        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
+        print("LaserEnvelopeCircularFlattenedGaussianAM error: box_side must be either 'inside' or 'xmin'. ")
 
 
     # Create Laser Envelope
@@ -3107,36 +3107,58 @@ except:
         )
         print("WARNING: LaserOffset unavailable because numpy was not found")
 
-def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,omega_0, reference_frequency, box_side="xmin"):
+def LaserFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI, box_side="xmin"):
 
     #Reads a Lasy HDF5 file and returns a Smilei Laser object with azimuthal modes.
 
-    from scipy.interpolate import RegularGridInterpolator
-    # Load  Data
-    f =  h5py.File(filename, mode='r')
-    dset = f['data']['0']['meshes']['laserEnvelope']
-    data = dset[:,:,:]
-    datadt, datadr = f['data']['0']['meshes']['laserEnvelope'].attrs.get("gridSpacing")
-    datantheta, datant, datanr = data.shape
-    datadtheta=(2*np.pi/datantheta)
-    dataB   = data/cst.c
+    # Transverse (radial) grid of the simulation box, already computed by Main
+    # from two of grid_length, cell_length, number_of_cells
+    Ltrans = Main.grid_length[1]
+    dtrans = Main.cell_length[1]
+    ntrans = Main.number_of_cells[1]
+    # Number of azimuthal modes of the simulation
+    Nm     = Main.number_of_AM
+    # Timestep of the simulation (also when it is set through timestep_over_CFL)
+    dt     = Main.timestep
 
-    # Physical constants
-    #lambda0 = 0.8e-6
-    #omega0 = 2 * np.pi * cst.c / lambda_0
-    omega_ratio = omega_0 / reference_frequency
-    onel = cst.c / omega_0
-    onet = 1. / omega_0
-    oneB = cst.m_e*omega_0/cst.e #Field
-    onen = cst.epsilon_0*cst.m_e*omega_0**2/cst.e**2 #Density
+    import h5py
+    import numpy as np
+    import scipy.constants as cst
+    from scipy.interpolate import RegularGridInterpolator
+    # Load  Data (gridUnitSI converts the grid to SI, as in the FBPIC reader)
+    with h5py.File(filename, mode='r') as f:
+        dset = f['data']['0']['meshes']['laserEnvelope']
+        data = dset[:,:,:]
+        grid_unit_SI     = dset.attrs.get("gridUnitSI", 1.)
+        datadt, datadr   = dset.attrs.get("gridSpacing") * grid_unit_SI
+        # Polarization of E in the lasy transverse plane (x_lasy, y_lasy) = (y_Smilei, z_Smilei), possibly complex
+        polarization     = dset.attrs.get("polarization", np.array([1., 0.]))
+        omega0_SI_lasy   = dset.attrs.get("angularFrequency", omega0_SI)
+    if abs(omega0_SI_lasy - omega0_SI) > 1e-6 * omega0_SI:
+        print("WARNING: LaserFromLasy: omega0_SI = %e differs from the lasy angularFrequency = %e" % (omega0_SI, omega0_SI_lasy))
+
+    ncomp, datant, datanr = data.shape
+    # The theta grid must resolve, without aliasing, the lasy modes shifted by +-1
+    # by the projection on Br, Btheta, and the Nm modes requested by Smilei
+    n_modes_lasy = (ncomp + 1) // 2
+    datantheta   = 2 * max(n_modes_lasy, Nm) + 1
+    datadtheta   = (2*np.pi/datantheta)
+    dataB        = data/cst.c
+
+    # Normalization: all lengths, times and fields in Smilei units, i.e. of reference_frequency_SI
+    omega_ratio = omega0_SI / reference_frequency_SI
+    onel = cst.c / reference_frequency_SI
+    onet = 1. / reference_frequency_SI
+    oneB = cst.m_e*reference_frequency_SI/cst.e #Field
+    onen = cst.epsilon_0*cst.m_e*reference_frequency_SI**2/cst.e**2 #Density
 
     datadt  /= onet
     datadr  /= onel
     dataB   /= oneB
 
     datatheta= np.linspace(0, 2 * np.pi,datantheta , endpoint=False)
-    datat = np.linspace(0, datant*datadt, datant)
-    datar = np.linspace(0, datanr*datadr, datanr)
+    datat    = np.arange(datant) * datadt
+    datar    = np.arange(datanr) * datadr
 
     ### Lasy mode reconstruction according to the way modes are stored in h5 files
     def reconstruct_rt_field_lasy(data, t_index, theta_grid):
@@ -3166,16 +3188,15 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
 
         return E_rt
 
-    #Complex envelope interpolator
-    Bz_theta=np.zeros((datantheta,datant,datanr), dtype=np.complex128)
+    #Complex envelope interpolator (scalar envelope, the polarization is applied later)
+    B_theta=np.zeros((datantheta,datant,datanr), dtype=np.complex128)
 
     for i in range(datant):
-        Bz_theta[:,i,:]=reconstruct_rt_field_lasy(dataB, t_index=i, theta_grid=datatheta)
+        B_theta[:,i,:]=reconstruct_rt_field_lasy(dataB, t_index=i, theta_grid=datatheta)
 
-    B_interp = RegularGridInterpolator((datatheta,datat, datar),Bz_theta)
-    #nprect = np.vectorize(cmath.rect)
+    B_interp = RegularGridInterpolator((datatheta,datat, datar),B_theta)
 
-    def Bzreal(theta, t, r):
+    def B_envelope(theta, t, r):
         theta = np.asarray(theta)
         t = np.asarray(t)
         r = np.asarray(r)
@@ -3195,34 +3216,12 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
             points = np.stack((theta[valid_mask], t[valid_mask], r[valid_mask]), axis=-1)
             result[valid_mask] = B_interp(points)
 
-        return np.real(result)
+        return result
 
-
-    def Bzimag(theta, t, r):
-        theta = np.asarray(theta)
-        t = np.asarray(t)
-        r = np.asarray(r)
-
-        # Create a mask for valid entries for the interpolation to happen only inside the mask
-        valid_mask = (
-            (theta >= datatheta[0]) & (theta <= datatheta[-1]) &
-            (t >= datat[0]) & (t <= datat[-1]) &
-            (r >= datar[0]) & (r <= datar[-1])
-        )
-
-        # Create output array initialized to zero (complex)
-        result = np.zeros_like(theta, dtype=np.complex128)
-
-        # Apply interpolation only where valid
-        if np.any(valid_mask):
-            points = np.stack((theta[valid_mask], t[valid_mask], r[valid_mask]), axis=-1)
-            result[valid_mask] = B_interp(points)
-
-        return np.imag(result)
-
-    def get_laser_Br_Bt(Bz,theta):
-        Br= Bz*np.sin(theta)
-        Bt= Bz*np.cos(theta)
+    # B = x_hat cross E / c, with E = (Ey, Ez) = envelope * (polarization[0], polarization[1])
+    def get_laser_Br_Bt(By, Bz, theta):
+        Br =  By*np.cos(theta) + Bz*np.sin(theta)
+        Bt = -By*np.sin(theta) + Bz*np.cos(theta)
         return (Br, Bt)
 
     def get_laser_decomposed(Br_laser,Bt_laser ):
@@ -3237,12 +3236,13 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
 
     tt, xt, yr = np.meshgrid(datatheta, simt, simr, indexing="ij")
     #Reconstruction of the data on the simulation grid
-    simgrid_bz_real = Bzreal(tt,xt,yr)
-    simgrid_bz_imag = Bzimag(tt,xt,yr)
+    simgrid_b  = B_envelope(tt,xt,yr)
+    simgrid_by = -polarization[1] * simgrid_b
+    simgrid_bz =  polarization[0] * simgrid_b
 
     #From By and Bz get Br and Bt on the polar mesh
-    Br_laserreal, Bt_laserreal = get_laser_Br_Bt(simgrid_bz_real , tt)
-    Br_laserimag, Bt_laserimag = get_laser_Br_Bt(simgrid_bz_imag, tt)
+    Br_laserreal, Bt_laserreal = get_laser_Br_Bt(simgrid_by.real, simgrid_bz.real, tt)
+    Br_laserimag, Bt_laserimag = get_laser_Br_Bt(simgrid_by.imag, simgrid_bz.imag, tt)
     #Decompose Br and Bt into azimuthal modes
     Br_mreal, Bt_mreal =get_laser_decomposed(Br_laserreal,Bt_laserreal)
     Br_mimag, Bt_mimag =get_laser_decomposed(Br_laserimag,Bt_laserimag)
@@ -3264,6 +3264,8 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
     Btimag[0,:,:]=Bt_mimag[0,:,:]
     Btimag[1:Nm,:,:]=2*Bt_mimag[1:Nm,:,:]
 
+    n_r_sim = len(simr)
+
     def build_mode_functions(Brreal, Brimag, Btreal, Btimag, Nm, dt, dtrans, N_time):
 
         mode_functions = []
@@ -3273,32 +3275,34 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
             def make_Br(m):
 
                 def Br_mode(r, t):
-                    if t < N_time * dt:
-                        it = round(t/dt - 0.5)
-                        ir = round(2*r/dtrans)
+                    it = round(t/dt - 0.5)
+                    ir = round(2*r/dtrans)
+                    # outside the precomputed time window or radial range the field is zero
+                    if 0 <= t < N_time * dt and 0 <= ir < n_r_sim:
 
                         return np.complex128(
                             Brreal[m, it, ir] * np.cos(omega_ratio*t) +
                             Brimag[m, it, ir] * np.sin(omega_ratio*t)
                         )
                     else:
-                        return 0.0
+                        return 0j
 
                 return Br_mode
 
             def make_Bt(m):
 
                 def Bt_mode(r, t):
-                    if t < N_time * dt:
-                        it = round(t/dt - 0.5)
-                        ir = round(2*r/dtrans)
+                    it = round(t/dt - 0.5)
+                    ir = round(2*r/dtrans)
+                    # outside the precomputed time window or radial range the field is zero
+                    if 0 <= t < N_time * dt and 0 <= ir < n_r_sim:
 
                         return np.complex128(
                             Btreal[m, it, ir] * np.cos(omega_ratio*t) +
                             Btimag[m, it, ir] * np.sin(omega_ratio*t)
                         )
                     else:
-                        return 0.0
+                        return 0j
 
                 return Bt_mode
 
@@ -3322,4 +3326,137 @@ def LaserFromLasy(filename, dt, dtrans, Ltrans, ntrans, N_time, Nm, lambda_0,ome
     Laser(
         box_side         = box_side,
         space_time_profile_AM =  mode_functions
+    )
+    
+def LaserEnvelopeFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI,
+        envelope_solver = "explicit",box_side="xmin",
+        Envelope_boundary_conditions = [["reflective"]],
+        Env_pml_sigma_parameters = [[0.90,2],[10.0,2],[10.0,2]],
+        Env_pml_kappa_parameters = [[1.00,1.00,2],[1.00,1.00,2],[1.00,1.00,2]],
+        Env_pml_alpha_parameters = [[0.90,0.90,1],[0.75,0.75,1],[0.75,0.75,1]]):
+
+    # Reads a Lasy HDF5 file (thetaMode geometry) and creates a LaserEnvelope injected from xmin.
+    # Perfect cylindrical symmetry is assumed for the laser envelope: only the first azimuthal mode of the file is used.
+    # Lasy stores the envelope of the electric field, E = Re[ env * exp(-i*omega0*t) ] * polarization,
+    # while the Smilei envelope is the one of the vector potential: it is obtained by integrating
+    # in time the relation between the two envelopes (see below), without carrier oscillation.
+
+    import h5py
+    import numpy as np
+    import scipy.constants as cst
+    from scipy.interpolate import RegularGridInterpolator
+    
+    if box_side != "xmin":
+        print("LaserEnvelopeFromLasyAM error: currently only box_side = 'xmin' is supported.")
+
+    # Grid of the simulation, already computed by Main
+    Ltrans = Main.grid_length[1]
+    dtrans = Main.cell_length[1]
+    ntrans = Main.number_of_cells[1]
+    dt     = Main.timestep
+
+    # Load data (gridUnitSI converts the grid to SI)
+    with h5py.File(filename, mode='r') as f:
+        dset = f['data']['0']['meshes']['laserEnvelope']
+        data = dset[:,:,:]
+        grid_unit_SI     = dset.attrs.get("gridUnitSI", 1.)
+        datadt, datadr   = dset.attrs.get("gridSpacing") * grid_unit_SI
+        # Polarization of E in the lasy transverse plane (x_lasy, y_lasy) = (y_Smilei, z_Smilei), possibly complex
+        polarization     = np.asarray(dset.attrs.get("polarization", np.array([1., 0.])), dtype=np.complex128)
+        omega0_SI_lasy   = dset.attrs.get("angularFrequency", omega0_SI)
+    if abs(omega0_SI_lasy - omega0_SI) > 1e-6 * omega0_SI:
+        print("WARNING: LaserEnvelopeFromLasyAM: omega0_SI = %e differs from the lasy angularFrequency = %e" % (omega0_SI, omega0_SI_lasy))
+
+    ncomp, datant, datanr = data.shape
+    # Only the first azimuthal mode of the file is kept
+    if ncomp > 1:
+        print("WARNING: LaserEnvelopeFromLasyAM: the lasy file contains %d azimuthal modes, only the first one will be used (perfect cylindrical symmetry is assumed for the laser envelope)"
+              % ((ncomp + 1) // 2))
+
+    # Polarization: the envelope model supports only linear (ellipticity = 0) or circular (ellipticity = 1) polarization
+    polarization_norm   = np.sqrt(np.sum(np.abs(polarization)**2))
+    polarization        = polarization / polarization_norm
+    # Global phase of a linear polarization p = exp(i*alpha)*(cos(phi), sin(phi))
+    polarization_global_phase = 0.5 * np.angle(polarization[0]**2 + polarization[1]**2)
+    polarization_real   = polarization * np.exp(-1j * polarization_global_phase)
+    if np.max(np.abs(polarization_real.imag)) < 1e-6:
+        # Linear polarization: the envelope is the vector potential along the polarization direction
+        ellipticity         = 0.
+        polarization_phi    = np.arctan2(polarization_real[1].real, polarization_real[0].real)
+        polarization_factor = np.exp(1j * polarization_global_phase)
+    elif abs(abs(polarization[0]) - abs(polarization[1])) < 1e-6 and abs(np.real(polarization[0] * np.conj(polarization[1]))) < 1e-6:
+        # Circular polarization: the envelope is the vector potential of each component, i.e. of the one along y
+        ellipticity         = 1.
+        polarization_phi    = 0.
+        polarization_factor = polarization[0]
+    else:
+        raise Exception("LaserEnvelopeFromLasyAM: the polarization %s of the lasy file is neither linear nor circular" % str(polarization))
+
+    # Normalization: all lengths, times and fields in Smilei units, i.e. of reference_frequency_SI
+    omega_ratio = omega0_SI / reference_frequency_SI
+    onel        = cst.c / reference_frequency_SI
+    onet        = 1. / reference_frequency_SI
+    oneE        = cst.m_e * cst.c * reference_frequency_SI / cst.e # Field
+
+    datadt     /= onet
+    datadr     /= onel
+    datat       = np.arange(datant) * datadt
+    datar       = np.arange(datanr) * datadr
+
+    # Envelope of the normalized electric field along the polarization, first azimuthal mode of the file
+    data_E      = data[0] / oneE * polarization_factor
+
+    # Envelope of the normalized vector potential, from the relation between the envelopes
+    #   E_envelope = -(d/dt - i*omega) A_envelope
+    # (with A = Re[A_envelope*exp(i*omega*(x-t))], E = -dA/dt; see e.g. Eq. B1 of
+    # F. Massimo et al., time-averaged ponderomotive approximation in a Lorentz boosted frame),
+    # i.e. dA_envelope/dt = i*omega*A_envelope - E_envelope.
+    # It is discretized with centered finite differences at t_(n+1/2) (trapezoidal scheme):
+    #   (A_(n+1) - A_n)/dt = i*omega*(A_(n+1) + A_n)/2 - (E_(n+1) + E_n)/2,
+    # which gives the explicit update
+    #   A_(n+1) = [ (1 + i*omega*dt/2)*A_n - dt*(E_n + E_(n+1))/2 ] / (1 - i*omega*dt/2).
+    # The scheme is second order and its amplification factor has modulus 1 for any omega*dt.
+    half_i_omega_dt           = 0.5j * omega_ratio * datadt
+    one_ov_one_minus_half_i_omega_dt = 1. / (1. - half_i_omega_dt)
+    # Initial condition consistent with E_envelope at the start of the lasy time axis (zero if the
+    # pulse starts from zero).
+    data_A                    = np.zeros_like(data_E)
+    data_A[0, :]              = (data_E[0, :] / (1j * omega_ratio)
+                                 + (data_E[1, :] - data_E[0, :]) / datadt / (1j * omega_ratio)**2)
+    for it in range(datant - 1):
+        data_A[it+1, :]       = ((1. + half_i_omega_dt) * data_A[it, :]
+                                 - 0.5 * datadt * (data_E[it, :] + data_E[it+1, :])) * one_ov_one_minus_half_i_omega_dt
+
+    # Linear interpolation of the envelope on the times and radii where Smilei evaluates it:
+    # t = (k+1/2)*dt for k = -1, ..., N_time-1 (Smilei uses time_dual and time_dual-dt),
+    # r = j*dtrans/2 (primal and dual radii; negative radii of the ghost cells are folded, the cylindrically symmetric envelope is even in r)
+    simt        = (np.arange(-1, N_time) + 0.5) * dt
+    simr        = np.linspace(0, Ltrans+2*dtrans+dtrans/2, (ntrans+3)*2)
+    A_interp    = RegularGridInterpolator((datat, datar), data_A, method="linear", bounds_error=False, fill_value=0.)
+    tt, rr      = np.meshgrid(simt, simr, indexing="ij")
+    A_simgrid   = A_interp(np.stack((tt, rr), axis=-1))
+
+    n_t_sim     = len(simt)
+    n_r_sim     = len(simr)
+
+    def envelope_profile(r, t):
+        it = round(t/dt - 0.5) + 1
+        ir = round(2*abs(r)/dtrans)
+        # outside the precomputed time window or radial range the envelope is zero
+        if 0 <= it < n_t_sim and t < N_time * dt and ir < n_r_sim:
+            return complex(A_simgrid[it, ir])
+        else:
+            return 0j
+
+    LaserEnvelope(
+        omega                        = omega_ratio,
+        envelope_profile             = envelope_profile,
+        envelope_solver              = envelope_solver,
+        box_side                     = box_side,
+        Envelope_boundary_conditions = Envelope_boundary_conditions,
+        Env_pml_sigma_parameters     = Env_pml_sigma_parameters,
+        Env_pml_kappa_parameters     = Env_pml_kappa_parameters,
+        Env_pml_alpha_parameters     = Env_pml_alpha_parameters,
+        polarization_phi             = polarization_phi,
+        ellipticity                  = ellipticity
     )

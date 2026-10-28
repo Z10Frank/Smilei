@@ -1,6 +1,3 @@
-# ----------------------------------------------------------------------------------------
-# 					SIMULATION PARAMETERS FOR THE PIC-CODE SMILEI
-# ----------------------------------------------------------------------------------------
 # Vacuum propagation of a Gaussian laser in AMcylindrical geometry,
 # derived from the benchmark tstAM_00_em_propagation.py.
 #
