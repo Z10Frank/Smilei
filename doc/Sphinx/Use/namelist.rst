@@ -2529,7 +2529,6 @@ modulations in the instantaneous angular frequency and phase, for example to def
         filename               = "lasy_laser_00000.h5",
         N_time                 = 500,
         omega0_SI              = 2.*math.pi*scipy.constants.c/0.8e-6,
-        reference_frequency_SI = 2.*math.pi*scipy.constants.c/0.8e-6,
         box_side               = "xmin"
     )
 
@@ -2542,6 +2541,8 @@ modulations in the instantaneous angular frequency and phase, for example to def
   The magnetic field components :math:`B_r` and :math:`B_\theta` are computed from this field,
   decomposed in the :py:data:`Main.number_of_AM` azimuthal modes of the simulation, and injected through
   a ``Laser`` block with ``space_time_profile_AM``.
+  The field in V/m in the LASY file is converted to normalized units using the ``reference_angular_frequency_SI``
+  specified in the ``Main`` block.
   The polarization and azimuthal structure of the field are read from the LASY file.
 
   This creator must be called after the ``Main`` block, since it reads the
@@ -2574,14 +2575,6 @@ modulations in the instantaneous angular frequency and phase, for example to def
 
     The laser angular frequency in SI units (rad/s). A warning is printed if it differs from
     the angular frequency stored in the LASY file.
-
-  .. py:data:: reference_frequency_SI
-
-    :type: float
-
-    The reference angular frequency of the simulation in SI units (rad/s), used to convert
-    the SI quantities of the LASY file into Smilei units. It should be equal to
-    :py:data:`Main.reference_angular_frequency_SI` when the latter is defined.
 
   .. py:data:: box_side
 
@@ -2872,7 +2865,7 @@ for these ``LaserEnvelope`` creators, the arguments are defined as for the
 ``order_N`` and ``flattened_intensity_position`` defined as for the corresponding ``LaserSquareFlattenedGaussian2D``,
 ``LaserCircularFlattenedGaussian3D`` creators.
 
-.. rubric:: 7. Defining a laser from a LASY file
+.. rubric:: 7. Defining a laser envelope from a LASY file
 
 ..
 
@@ -2886,7 +2879,6 @@ correspond to a simulation in ``AMcylindrical`` geometry. The laser is introduce
         filename               = "lasy_laser_00000.h5",
         N_time                 = 500,
         omega0_SI              = 2.*math.pi*scipy.constants.c/0.8e-6,
-        reference_frequency_SI = 2.*math.pi*scipy.constants.c/0.8e-6,
         box_side               = "xmin",
         envelope_solver        = 'explicit',
         Envelope_boundary_conditions = [ ["reflective"] ],
