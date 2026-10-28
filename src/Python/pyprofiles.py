@@ -3107,7 +3107,15 @@ except:
         )
         print("WARNING: LaserOffset unavailable because numpy was not found")
 
-def LaserFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI, box_side="xmin"):
+def LaserFromLasyAM(filename, N_time, omega0_SI, box_side="xmin"):
+
+    print("\nWARNING: LaserFromLasyAM: LASY lasers are stored in SI units.")
+    print("For the conversion to adimensional units in Smilei,")
+    print("reference_angular_frequency_SI = ",Main.reference_angular_frequency_SI," rad/s")
+    print("set in the Main block is used. ")
+    print("If reference_angular_frequency_SI not specified in the Main block,")
+    print("the default value is used.\n")
+    reference_frequency_SI = Main.reference_angular_frequency_SI
 
     #Reads a Lasy HDF5 file and returns a Smilei Laser object with azimuthal modes.
 
@@ -3328,7 +3336,7 @@ def LaserFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI, box_sid
         space_time_profile_AM =  mode_functions
     )
     
-def LaserEnvelopeFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI,
+def LaserEnvelopeFromLasyAM(filename, N_time, omega0_SI,
         envelope_solver = "explicit",box_side="xmin",
         Envelope_boundary_conditions = [["reflective"]],
         Env_pml_sigma_parameters = [[0.90,2],[10.0,2],[10.0,2]],
@@ -3348,6 +3356,14 @@ def LaserEnvelopeFromLasyAM(filename, N_time, omega0_SI, reference_frequency_SI,
     
     if box_side != "xmin":
         print("LaserEnvelopeFromLasyAM error: currently only box_side = 'xmin' is supported.")
+
+    print("\nWARNING: LaserEnvelopeFromLasyAM: LASY lasers are stored in SI units.")
+    print("For the conversion to adimensional units in Smilei,")
+    print("reference_angular_frequency_SI = ",Main.reference_angular_frequency_SI," rad/s")
+    print("set in the Main block is used. ")
+    print("If reference_angular_frequency_SI not specified in the Main block,")
+    print("the default value is used.\n")
+    reference_frequency_SI = Main.reference_angular_frequency_SI
 
     # Grid of the simulation, already computed by Main
     Ltrans = Main.grid_length[1]

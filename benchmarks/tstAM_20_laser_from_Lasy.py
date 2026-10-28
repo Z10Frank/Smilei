@@ -170,8 +170,7 @@ else:
     LaserFromLasyAM(
         lasy_filename,
         number_of_injection_timesteps,
-        omega0_SI,
-        reference_frequency_SI
+        omega0_SI
     )
 
 DiagFields(

@@ -182,7 +182,6 @@ else:
         lasy_filename,
         number_of_injection_timesteps,
         omega0_SI,
-        reference_frequency_SI,
         envelope_solver              = envelope_solver,
         Envelope_boundary_conditions = envelope_boundary_conditions
     )
